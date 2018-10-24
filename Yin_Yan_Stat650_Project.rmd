@@ -1,0 +1,728 @@
+---
+title: "Stat 650 Project"
+author: "YAN YIN"
+date: "September 29, 2018"
+output:
+  html_document:
+    df_print: paged
+  word_document: default
+---
+
+Stat 650 Section 1: 12:00pm - 1:40pm
+
+#Answers:
+##Part 1
+###1.Find the US Government website where Airline On-Time Performance Data can be downloaded. What website is this and how can you download the data? Download the data for the available months in 2018 for the Bay Area. Can you do this? If not, what can you download?
+
+Answer:    
+Airline On-Time Performance Data was downloaded on website.
+(https://www.transtats.bts.gov/DL_SelectFields.asp)
+When I get to the website, I select some variables and filter geography to "California", filter year to "2018", and filter Period to every month. And then, I clicked download button, zip files for every month are downloaded in my data folder in my R project. After that, I unzipped all the files and got data as .csv files for individual months. I checked all the files and found the records are from January to July. No records showed for August and after.   
+
+###2.Once you have your data downloaded, develop your code for the first month of data. The last step will be to merge the data and perform an overall analysis for 2018. Extract the flights that departed from the Bay Area. Include all flights from department from San Francisco, Oakland, and San Jose. How many flight were there in January 2018.
+
+Answer:     
+After I read the data, I checked them with glimpse() function. I found there is a variable named X46 full of missing values which are not downloaded on my purpose. So I deleted the variable using the select() function. Then I filter all flights departed from San Francisco, Oakland, and San Jose.     
+
+> sfoflight18Jan <- CAflightsJan18 %>%    
+  select(-X46) %>%      
+  filter(ORIGIN_CITY_NAME %in% c("San Francisco, CA", "Oakland, CA", "San Jose, CA"))      
+         
+After I cleaned data for January to July, I combined them together.     
+
+>sfoflights18 <- bind_rows(sfoflight18Jan, sfoflight18Feb, sfoflight18Mar, sfoflight18Apr, sfoflight18May, sfoflight18Jun, sfoflight18Jul)
+      
+I use glimpse() function to check sfoflight18Jan and sfoflights18. The results showed that the total flights of sfoflights18 are 163,056. And there are 22,606 flights in January 2018.  
+
+
+###3.Compare the variables that are available in the full dataset with the variables in the nycflgihts13 data set. Make a table of the variables that are in both datasets, with a description of each variable. Hint: In RStudio see Help > RMarkdown Quick Reference > Tables.Report the intersection of the variables.
+
+Answer:    
+
+ncyflights13 variables  | sfoflights18 variabls  | description
+------------------------|------------------------|----------------------------------------------------------------
+year                    | YEAR                   | year of flight
+month                   | MONTH                  | month of flight
+day                     | DAY_OF_MONTH           | day of month
+dep_time                | DEP_TIME               | Actual Departure Time (local time: hhmm)
+sched_dep_time          | CRS_DEP_TIME           | schedualed/CRS Departure Time (local time: hhmm)
+dep_delay               | DEP_DELAY              | Difference in minutes between scheduled and actual departure time. Early departures show negative numbers.
+arr_time                | ARR_TIME               | Actual Arrival Time (local time: hhmm)
+sched_arr_time          | CRS_ARR_TIME           | schedualed/CRS Arrival Time (local time: hhmm)
+arr_delay               | ARR_DELAY              | Difference in minutes between scheduled and actual arrival time. Early arrivals show negative numbers.     
+carrier                 | OP_UNIQUE_CARRIER      | Unique Carrier Code. 
+flight                  | OP_CARRIER_FL_NUM      | Flight number
+tailnum                 | TAIL_NUM               | Tail number
+origin                  | ORIGIN                 | Origin Airport
+dest                    | DEST                   | Destination Airport
+air_time                | AIR_TIME               | Flight Time, in Minutes
+distance                | DISTANCE               | Distance between airports (miles)
+
+
+###4.What new variables do you now also have. Make a table of the variables that are in the new dataset, with a description of each variable. (Ok, this is kind of long. Make a table for 10 other variables you consider important.)
+
+Answer:     
+
+sfoflights18 variables | description
+-----------------------|--------------------------------------------------
+ORIGIN_CITY_NAME       | Origin Airport, City Name
+ORIGIN_STATE_ABR       | Origin Airport, State Code
+ORIGIN_STATE_NM        | Origin Airport, State Name
+DEST_CITY_NAME         | Destination Airport, City Name
+DEST_STATE_ABR         | Destination Airport, State Code
+DEST_STATE_NM          | Destination Airport, State Name
+DEP_DELAY_GROUP        | Departure Delay intervals, every (15 minutes from <-15 to >180)
+ARR_DELAY_GROUP        | Arrival Delay intervals, every (15-minutes from <-15 to >180)
+CANCELLED              | Cancelled Flight Indicator (1=Yes)
+CANCELLATION_CODE      | Specifies The Reason For Cancellation
+
+###5.Answer Exercises 4.2, 4.3, 4.4 (you can only answer the second part of 4.4) on page 89 of the book, changing nycflights13 to sfoflights18. Answer all of the questions for the SF Bay Area in 2018.
+
+**Question 4.2 What month had the highest proportion of cancelled fights? What month had the lowest? Interpret any seasonal patterns.**
+
+Answer:      
+March had the highest proportion of cancelled flights of 0.0225 while February had the lowest proportion of cancelled flights of 0.00715 . 
+
+I use the code to analyze the proportion of cancelled flights for each months.     
+
+> sfoflights18 %>%     
+  group_by(MONTH)%>%     
+  summarize(n=n(), canl_num = sum(CANCELLED), canl_prop = canl_num / n) %>%      
+  arrange(canl_prop)      
+         
+And then I visualized the data using the code     
+
+> ggplot(aes(x=MONTH, y= canl_prop))+       
+  geom_point()+geom_line()
+       
+
+**Question 4.3 What plane (specifed by the tailnum variable) traveled the most times from Bay Area airports in 2018? Plot the number of trips per week over the year.**
+
+Answer:         
+
+>sfoflights18 %>%      
+  group_by(TAIL_NUM) %>%       
+  summarize(n=n()) %>%      
+  arrange(desc(n))       
+        
+It shows that plane "N633VA" traveled 260 times which is the most times from Bay Area airports in 2018. 
+I use the code below to plot the number of trips per week over the year:      
+
+> sfoflights18 %>%       
+  filter(TAIL_NUM == "N633VA") %>%       
+  mutate(Week_Num = week(FL_DATE)) %>%       
+  group_by(Week_Num) %>%      
+  summarise(n=n()) %>%      
+  ggplot(aes(x= Week_Num, y=n)) +       
+  geom_point() +      
+  geom_line() +     
+  geom_smooth() +       
+  ggtitle("N633VA")       
+
+         
+**Question 4.4 What is the oldest plane (specifed by the tailnum variable) that flew from Bay Area airports in 2018? How many airplanes that flew from Bay Area are included in the planes table?**
+
+Answer:     
+
+>planes %>%       
+  mutate(age = year) %>%       
+  select(age, tailnum) %>%      
+  right_join(sfoflights18, by=c("tailnum"="TAIL_NUM")) %>%       
+  group_by(age, tailnum) %>%       
+  summarize(n=n()) %>%       
+  arrange(age)      
+        
+I just use plane data from nycflights13 package. And find the oldest plane that flew from Bay Area airports in 2018 are "N502UA" and "N505UA" of year 1989.      
+
+
+>sfoflights18 %>%        
+  select(TAIL_NUM, YEAR) %>%     
+  right_join(planes, by=c("TAIL_NUM"="tailnum")) %>%       
+  select(TAIL_NUM, YEAR) %>%      
+  filter(!is.na(YEAR)) %>%       
+  skim(TAIL_NUM)      
+       
+'YEAR' variable don't have missing values in sfoflights18 data. After right-join to planes data, it shows that the complete value of TAIL_NUM is 91693 which means 91693 records of sfoflights18 data can find matched data in planes. And result shows n_unique of TAIL_NUM is 1904. So in sfoflights18 data, there are 1904 TAIL_NUM groups can find in planes data. 
+
+
+##Part 2
+###1.Find a data source for weather data. Download the temperature and other weather data for the Bay Area in 2018.
+
+Answer:     
+ASOS download from [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/request/download.phtml)
+
+select network: California ASOS     
+Select station: [SFO] SAN FRANCISCO          
+                [OAK] OAKLAND      
+                [SJC] SAN JOSE INTL A        
+Select From Available Data: All Available         
+Specific Data Range: Start Date: 2018, January, 1      
+                     End Date: 2018, October, 6      
+Timezone of Observation Times: Corordinated Universal Time(UTC)       
+Download Options: Data Format: Comma Delimited(NO DEBUG headers)        
+include Latitude + Longitude? Yes      
+
+The selections are set as above and import the data into sfoweather18. 
+
+###2.Try to find the same variables in the nycflights 13 weather data. 
+
+Answer:     
+
+nycflights13 weather variables  |  description    |   sfoweather18 variables | description
+---------------|----------------------------|-------------|--------------------------------
+origin          | Weather station. Named origin to faciliate merging withflights() data | station   | three or four character site identifier
+temp          | Temperature in F        | tmpf    |  Air Temperature in Fahrenheit, typically @ 2 meters
+dewp          | dewpoint in F           | dwpf    | Dew Point Temperature in Fahrenheit, typically @ 2 meters
+humid         |   Relative humidity     | relh    |   Relative Humidity in %
+wind_dir      | Wind direction (in degrees) | drct  | Wind Direction in degrees from north
+wind_speed    | wind speed in mph       | sknt    |  Wind Speed in knots 
+wind_gust     | gust speed in mph       | gust    | Wind Gust in knots
+precip        |Precipitation, in inches | p01i    | One hour precipitation in inches
+pressure      |Sea level pressure in millibars | mslp   | Sea Level Pressure in millibar
+visib         | Visibility in miles     | vsby  | Visibility in miles
+time_hour     | Date and hour of the recording as a POSIXct date | valid  | timestamp of the observation
+
+###3.Merge your new weather data with the same measures in the nycflights13 flights data from your sfoflights18 data. 
+
+Answer:     
+Before I make merge, I changed the 'valid' variable into 'dttm' type and all the other 'fct' type variables into 'character' type.     
+
+>sfoweather18Hour <- sfoweather18 %>%        
+  select(1:14) %>%       
+  mutate(wea_date = date(valid), wea_hour = hour(valid)) %>%        
+  group_by(station, wea_date, wea_hour) %>%       
+  summarize(
+    lon = mean(lon, na.rm =TRUE),
+    lat = mean(lat, na.rm = TRUE),
+    tmpf = mean(tmpf, na.rm = TRUE),
+    dwpf = mean(dwpf, na.rm = TRUE),
+    relh = mean(relh, na.rm = TRUE),
+    drct = mean(drct, na.rm = TRUE),
+    sknt = mean(sknt, na.rm = TRUE),
+    p01i = mean(p01i, na.rm = TRUE),
+    alti = mean(alti, na.rm = TRUE),
+    mslp = mean(mslp, na.rm = TRUE),
+    vsby = mean(vsby, na.rm = TRUE),
+    gust = mean(gust, na.rm = TRUE)
+    )
+           
+This new data set combined all the rows within 1 hour in sfoweather18. 
+
+And then join it with sfoflight18.     
+
+>sfo_join <- sfoflights18 %>%       
+  mutate(DEP_hour = as.integer(substr(DEP_TIME, 0, nchar(DEP_TIME)-2)))  %>%      
+  left_join(sfoweather18Hour, by=c("ORIGIN" = "station", "DEP_hour" = "wea_hour", "FL_DATE" = "wea_date"))      
+       
+
+###4.Questions to answer:Answer Exercises 4.6, and 4.7 for the SF Bay Area 2018 data.
+**Question 4.6 Use the sfoflights18 and the weather table to answer the following questions: What is the distribution of temperature in July, 2018? Identify any important outliers in terms of the wind speed variable. What is the relationship between dewp and humid? What is the relationship between precip and visib?**
+
+Answer:      
+
+>sfoweather18 %>%      
+  filter(month(valid) == 7) %>%      
+  skim(tmpf, sknt)     
+     
+>sfoweather18 %>%      
+  filter(month(valid)==7) %>%      
+  ggplot(aes(x=tmpf))+     
+  geom_bar()          
+      
+
+Temperature(tmpf) in July, 2018 ranges from 52 to 93.9 with mean of 65.18 and sd of 7.43.
+
+>sfoweather18 %>%      
+  filter(month(valid)==7) %>%      
+  ggplot(aes(x=sknt))+      
+  geom_bar()        
+     
+
+Wind speed variable(sknt) in July, 2018 ranges from 0 to 27 with mean of 9.1 and sd of 4.92.After plot bar chart of sknt, we would identify outliers to be greater than 25.
+
+Scatterplot was made to show the relationship between dewpoint and humidity, and the relationship between precipitation and visibility. There are no obvious linear relationship between them. 
+
+>sfoweather18 %>%      
+  ggplot(aes(x=dwpf, y=relh))+     
+  geom_point()          
+      
+>sfoweather18 %>%      
+  ggplot(aes(x=p01i, y=vsby))+     
+  geom_point()          
+      
+
+**Question 4.7 Use the sfoflights18 and the weather table to answer the following questions: On how many days was there precipitation in the Bay area in 2018? Were there differences in the mean visibility (visib) based on the day of the week and/or month of the year?**
+
+Answer:    
+
+>sfoweather18 %>%      
+  mutate(DATE=as.Date(valid, format="%m%d%Y")) %>%      
+  filter(p01i>0)%>%       
+  group_by(DATE)%>%      
+  summarize(n=n())       
+         
+The result shows a tibble of 43 rows. There are 43 days with precipitation in the Bay area in 2018. 
+      
+>sfoweather18 %>%       
+  mutate(Week_Day = weekdays(valid)) %>%     
+  group_by(Week_Day) %>%     
+  summarize(visib_mean = mean(vsby, na.rm=TRUE))      
+
+       
+The mean of vsby(visibility) based on the day of the week is slightly different around 9.5
+ Week_Day  visib_mean      
+  <chr>          <dbl>      
+1 Friday          9.47      
+2 Monday          9.47       
+3 Saturday        9.70      
+4 Sunday          9.68         
+5 Thursday        9.32        
+6 Tuesday         9.50        
+7 Wednesday       9.46       
+
+>sfoweather18 %>%       
+  mutate(Mon = month(valid))%>%     
+  group_by(Mon)%>%     
+  summarize(visib_mean = mean(vsby, na.rm=TRUE)) %>%     
+  arrange(visib_mean)     
+
+     
+Shows that January has the worst visibility of 8.33 and October has the best visibility of 9.95. 
+
+
+
+#Code and Explanation:
+##Part 1
+###1.
+None.
+
+###2.
+
+```{r message = FALSE}
+library(tidyverse)
+library(nycflights13)
+library(skimr)
+library(lubridate)
+```
+
+Read .csv files
+
+```{r message=FALSE}
+CAflightsJan18 <-
+  read_csv(file="./data/1028854783_T_ONTIME_REPORTING_1.csv")
+CAflightsFeb18 <-
+  read_csv(file="./data/1028854783_T_ONTIME_REPORTING_2.csv")
+CAflightsMar18 <-
+  read_csv(file="./data/1028854783_T_ONTIME_REPORTING_3.csv")
+CAflightsApr18 <-
+  read_csv(file="./data/1028854783_T_ONTIME_REPORTING_4.csv")
+CAflightsMay18 <-
+  read_csv(file="./data/1028854783_T_ONTIME_REPORTING_5.csv")
+CAflightsJun18 <-
+  read_csv(file="./data/1028854783_T_ONTIME_REPORTING_6.csv")
+CAflightsJul18 <-
+  read_csv(file="./data/1028854783_T_ONTIME_REPORTING_7.csv")
+```
+```{r}
+glimpse(CAflightsJan18)
+```
+```{r message=FALSE}
+glimpse(CAflightsFeb18)
+```
+```{r}
+glimpse(CAflightsMar18)
+```
+```{r}
+glimpse(CAflightsApr18)
+```
+
+```{r}
+glimpse(CAflightsMay18)
+```
+
+```{r}
+glimpse(CAflightsJun18)
+```
+
+```{r}
+glimpse(CAflightsJul18)
+```
+
+```{r}
+sfoflight18Jan <- CAflightsJan18 %>%
+  select(-X46) %>%
+  filter(ORIGIN_CITY_NAME %in% c("San Francisco, CA", "Oakland, CA", "San Jose, CA"))
+```
+
+
+```{r}
+glimpse(sfoflight18Jan)
+```
+```{r}
+sfoflight18Feb <- CAflightsFeb18 %>%
+  select(-X46) %>%
+  filter(ORIGIN_CITY_NAME %in% c("San Francisco, CA", "Oakland, CA", "San Jose, CA"))
+```
+
+```{r}
+glimpse(sfoflight18Feb)
+```
+
+```{r}
+sfoflight18Mar <- CAflightsMar18 %>%
+  select(-X46) %>%
+  filter(ORIGIN_CITY_NAME %in% c("San Francisco, CA", "Oakland, CA", "San Jose, CA"))
+```
+
+```{r}
+glimpse(sfoflight18Mar)
+```
+
+```{r}
+sfoflight18Apr <- CAflightsApr18 %>%
+  select(-X46) %>%
+  filter(ORIGIN_CITY_NAME %in% c("San Francisco, CA", "Oakland, CA", "San Jose, CA"))
+```
+
+```{r}
+glimpse(sfoflight18Apr)
+```
+
+```{r}
+sfoflight18May <- CAflightsMay18 %>%
+  select(-X46) %>%
+  filter(ORIGIN_CITY_NAME %in% c("San Francisco, CA", "Oakland, CA", "San Jose, CA"))
+```
+
+```{r}
+glimpse(sfoflight18May)
+```
+
+```{r}
+sfoflight18Jun <- CAflightsJun18 %>%
+  select(-X46) %>%
+  filter(ORIGIN_CITY_NAME %in% c("San Francisco, CA", "Oakland, CA", "San Jose, CA"))
+```
+
+```{r}
+glimpse(sfoflight18Jun)
+```
+```{r}
+sfoflight18Jul <- CAflightsJul18 %>%
+  select(-X46) %>%
+  filter(ORIGIN_CITY_NAME %in% c("San Francisco, CA", "Oakland, CA", "San Jose, CA"))
+```
+
+```{r}
+glimpse(sfoflight18Jul)
+```
+
+```{r}
+sfoflights18 <- bind_rows(sfoflight18Jan, sfoflight18Feb, sfoflight18Mar, sfoflight18Apr, sfoflight18May, sfoflight18Jun, sfoflight18Jul)
+```
+
+```{r}
+glimpse(sfoflights18)
+```
+
+###3.
+
+```{r}
+library(nycflights13)
+```
+```{r}
+glimpse(flights)
+```
+```{r}
+glimpse(planes)
+```
+
+
+###4.
+None.
+
+###5.
+**Question 4.2 What month had the highest proportion of cancelled fights? What month had the lowest? Interpret any seasonal patterns.**
+
+Check the cancellation indicator variable "CANCELLED" in the dataset. There is no missing values in this variable.
+```{r}
+sfoflights18 %>% 
+  group_by(CANCELLED) %>%
+  summarize(n=n())
+```
+
+Analyze the proportion of cancelled flights for each months. 
+```{r}
+sfoflights18 %>%
+  group_by(MONTH)%>%
+  summarize(n=n(), canl_num = sum(CANCELLED), canl_prop = canl_num / n) %>%
+  arrange(canl_prop) 
+```
+
+
+
+
+Visualize the propotion of cancelled flights for each months. 
+```{r}
+sfoflights18 %>%
+  group_by(MONTH)%>%
+  summarize(n=n(), 
+            canl_num = sum(CANCELLED), 
+            canl_prop = canl_num / n) %>%
+  arrange(canl_prop) %>%
+  ggplot(aes(x=MONTH, y= canl_prop))+
+  geom_point()+geom_line()
+```
+
+**Question 4.3 What plane (specifed by the tailnum variable) traveled the most times from Bay Area airports in 2018? Plot the number of trips per week over the year.**
+
+Find the plane traveled the most times from Bay Area airports in 2018.
+```{r}
+sfoflights18 %>%
+  group_by(TAIL_NUM) %>%
+  summarize(n=n()) %>%
+  arrange(desc(n))
+```
+Get the week variable. 
+```{r message=FALSE}
+library(lubridate)
+
+sfoflights18 %>%
+  mutate(week = week(FL_DATE)) %>%
+  glimpse()
+```
+
+Visualize the flights of "N633VA" in weeks.  
+```{r}
+sfoflights18 %>%
+  filter(TAIL_NUM == "N633VA") %>%
+  mutate(Week_Num = week(FL_DATE)) %>%
+  group_by(Week_Num) %>%
+  summarise(n=n()) %>%
+  ggplot(aes(x= Week_Num, y=n)) + 
+  geom_point() +
+  geom_line() +
+  geom_smooth() +
+  ggtitle("N633VA")
+```
+**Question 4.4 What is the oldest plane (specifed by the tailnum variable) that flew from Bay Area airports in 2018? How many airplanes that flew from Bay Area are included in the planes table?**
+
+Find the oldest plane. (I just use plane data from nycflights13 package.)
+```{r}
+planes %>%
+  mutate(age = year) %>%
+  select(age, tailnum) %>%
+  right_join(sfoflights18, by=c("tailnum"="TAIL_NUM")) %>%
+  group_by(age, tailnum) %>%
+  summarize(n=n()) %>%
+  arrange(age)
+
+```
+
+
+
+
+Count airplanes that flew from Bay Area and included in the planes table.
+
+
+```{r}
+planes
+```
+
+
+```{r}
+sfoflights18 %>%
+  glimpse
+```
+
+
+
+```{r}
+sfoflights18 %>%
+  skim(YEAR)
+```
+
+
+
+```{r}
+sfoflights18 %>%
+  select(TAIL_NUM, YEAR) %>%
+  right_join(planes, by=c("TAIL_NUM"="tailnum")) %>%
+  select(TAIL_NUM, YEAR) %>%
+  filter(!is.na(YEAR)) %>%
+  skim(TAIL_NUM)
+```
+
+
+
+##Part 2.
+
+###1.Find a data source for weather data. Download the temperature and other weather data for the Bay Area in 2018.
+
+```{r}
+?weather
+```
+
+```{r}
+weather
+```
+```{r}
+glimpse(weather)
+```
+
+
+
+```{r}
+sfoweather18 <- read.csv("https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?station=SFO&station=OAK&station=SJC&data=all&year1=2018&month1=1&day1=1&year2=2018&month2=10&day2=6&tz=Etc%2FUTC&format=onlycomma&latlon=yes&direct=no&report_type=1&report_type=2",header = TRUE, na.strings = "M")
+glimpse(sfoweather18)
+```
+
+###2.Try to find the same variables in the nycflights 13 weather data.
+None.
+
+
+###3.Merge your new weather data with the same measures in the nycflights13 flights data from your sfoflights18 data. 
+```{r}
+sfoweather18 <- sfoweather18 %>% 
+  mutate(
+    station = as.character(station), 
+    valid = as_datetime(valid), 
+    skyc1 = as.character(skyc1),
+    skyc2 = as.character(skyc2),
+    skyc3 = as.character(skyc3),
+    skyc4 = as.character(skyc4),
+    wxcodes = as.character(wxcodes),
+    metar = as.character(metar)) %>%
+  glimpse()
+```
+
+```{r}
+glimpse(sfoweather18)
+```
+
+```{r}
+glimpse(sfoflights18)
+```
+
+```{r}
+sfoflights18 %>%
+  mutate(DEP_hour = as.integer(substr(DEP_TIME, 0, nchar(DEP_TIME)-2)))  %>%
+  glimpse()
+ 
+```
+
+```{r}
+sfoweather18Hour <- sfoweather18 %>% 
+  select(1:14) %>%
+  mutate(wea_date = date(valid), wea_hour = hour(valid)) %>%
+  group_by(station, wea_date, wea_hour) %>%
+  summarize(
+    lon = mean(lon, na.rm =TRUE),
+    lat = mean(lat, na.rm = TRUE),
+    tmpf = mean(tmpf, na.rm = TRUE),
+    dwpf = mean(dwpf, na.rm = TRUE),
+    relh = mean(relh, na.rm = TRUE),
+    drct = mean(drct, na.rm = TRUE),
+    sknt = mean(sknt, na.rm = TRUE),
+    p01i = mean(p01i, na.rm = TRUE),
+    alti = mean(alti, na.rm = TRUE),
+    mslp = mean(mslp, na.rm = TRUE),
+    vsby = mean(vsby, na.rm = TRUE),
+    gust = mean(gust, na.rm = TRUE)
+    )
+sfoweather18Hour %>% glimpse()
+```
+
+```{r}
+sfo_join <- sfoflights18 %>%
+  mutate(DEP_hour = as.integer(substr(DEP_TIME, 0, nchar(DEP_TIME)-2)))  %>%
+  left_join(sfoweather18Hour, by=c("ORIGIN" = "station", "DEP_hour" = "wea_hour", "FL_DATE" = "wea_date"))
+
+sfo_join %>%
+  glimpse()
+```
+
+
+
+
+
+###4.Questions to answer:Answer Exercises 4.6, and 4.7 for the SF Bay Area 2018 data.
+
+** Question 4.6 Use the sfoflights18 and the weather table to answer the following questions: What is the distribution of temperature in July, 2018? Identify any important outliers in terms of the wind speed variable. What is the relationship between dewp and humid? What is the relationship between precip and visib?**
+
+```{r}
+sfoweather18 %>% 
+  filter(month(valid) == 7) %>%
+  skim(tmpf, sknt)
+```
+
+
+
+Temperature(tmpf) ranges from 52 to 93.9 with mean of 65.18 and sd of 7.43.
+
+Wind speed variable(sknt) ranges from 0 to 27 with mean of 9.1 and sd of 4.92.After plot bar chart of sknt, we would identify outliers to be greater than 25. 
+
+Distribution of temperature in July, 2018
+```{r}
+sfoweather18 %>%
+  filter(month(valid)==7) %>%
+  ggplot(aes(x=tmpf))+
+  geom_bar()
+```
+Distribution of wind speed in July, 2018.
+```{r}
+sfoweather18 %>%
+  filter(month(valid)==7) %>%
+  ggplot(aes(x=sknt))+
+  geom_bar()
+```
+
+Relationship of dewpoint and relative humidity.
+```{r}
+sfoweather18 %>%
+  ggplot(aes(x=dwpf, y=relh))+
+  geom_point()
+           
+```
+
+Relationship of precipitaion and visibility.
+
+```{r}
+sfoweather18 %>% 
+  ggplot(aes(x=p01i, y=vsby))+
+  geom_point()
+```
+
+
+
+**Question 4.7 Use the sfoflights18 and the weather table to answer the following questions: On how many days was there precipitation in the Bay area in 2018? Were there differences in the mean visibility (visib) based on the day of the week and/or month of the year?**
+
+```{r}
+sfoweather18 %>%
+  mutate(DATE=as.Date(valid, format="%m%d%Y")) %>%
+  filter(p01i>0)%>%
+  group_by(DATE)%>%
+  summarize(n=n())
+  
+```
+
+```{r}
+sfoweather18 %>%
+  mutate(Week_Day = weekdays(valid)) %>%
+  group_by(Week_Day) %>%
+  summarize(visib_mean = mean(vsby, na.rm=TRUE))
+```
+
+```{r}
+sfoweather18 %>%
+  mutate(Mon = month(valid))%>%
+  group_by(Mon)%>%
+  summarize(visib_mean = mean(vsby, na.rm=TRUE)) %>%
+  arrange(visib_mean)
+```
+
+
+
+
+
+
