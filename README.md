@@ -1,3 +1,3 @@
 # SFOflights-weather
 
-This is a project for course Advanced R in Data Science. 
+This is a project for Advanced R in Data Science course. 
